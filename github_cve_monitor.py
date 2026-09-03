@@ -2945,7 +2945,7 @@ a:hover{text-decoration:underline}
 
 <script>
 (function(){
-  var reports = """ + reports_json + """;
+  var reports = JSON.parse('""" + reports_json.replace("</", "<\\/") + """');
   var currentFilter = 'all';
   var searchQuery = '';
 

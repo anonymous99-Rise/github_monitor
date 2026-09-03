@@ -77,7 +77,7 @@ jobs:
           git diff
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
-          git pull --rebase origin main || echo "没有需要拉取的更改"
+          git pull --rebase --autostash origin main || echo "没有需要拉取的更改"
           git add .
           git commit -m "每日安全漏洞更新（`date +'%Y-%m-%d'`）" || echo "没有需要提交的更改"
 
