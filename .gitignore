@@ -25,6 +25,9 @@ data.db
 .DS_Store
 Thumbs.db
 
+# 动态生成的静态文件（由Python脚本在CI时生成）
+index.html
+
 # 保留的文件和目录
 !archive/
 !config.example.yaml
