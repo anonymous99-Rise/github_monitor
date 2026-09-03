@@ -1,6 +1,6 @@
 tools_list:
   - https://api.github.com/repos/Threekiii/Awesome-POC
-  - https://api.github.com/repos/adysec/nuclei_poc
+  - https://github.com/SourByte05/Vulnerability-Wiki-PoC
   - https://github.com/SourByte05/Vulnerability-Wiki-PoC
 
 keyword_list:
@@ -21,4 +21,4 @@ keyword_list:
  - 代码审计
 
 user_list:
- - adminlove520
+ - anonymous99-Rise
