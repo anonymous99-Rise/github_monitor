@@ -2145,6 +2145,9 @@ def generate_daily_report(cve_data=None, keyword_data=None, tools_update_data=No
     
     # 更新index.html
     update_index_html(archive_dir)
+
+    # 生成RSS Feed
+    generate_feed(archive_dir)
     
     # 推送日报到discard
     app_name = load_config()[0]
@@ -2490,285 +2493,520 @@ def generate_html_report(date, markdown_content, output_path):
     except Exception as e:
         print(f"生成HTML日报失败: {e}")
 
-# 更新index.html
+# 生成RSS Feed
+def generate_feed(archive_dir, base_url='https://github.com/anonymous99-Rise/github_monitor'):
+    """生成Atom格式的RSS Feed"""
+    import os
+    import re
+    from datetime import datetime
 
-def update_index_html(archive_dir):
-    """更新Github监控页"""
-    from jinja2 import Template
-    
-    # 定义index.html模板
-    index_template = """
-    <!DOCTYPE html>
-    <html lang="zh-CN">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>GitHub监控日报</title>
-        <style>
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-                line-height: 1.6;
-                color: #333;
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-            }
-            
-            header {
-                background: rgba(255, 255, 255, 0.95);
-                backdrop-filter: blur(10px);
-                color: #333;
-                padding: 30px;
-                border-radius: 16px;
-                text-align: center;
-                margin-bottom: 30px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-                animation: fadeInDown 0.6s ease-out;
-            }
-            
-            h1 {
-                margin: 0;
-                font-size: 2.5rem;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                background-clip: text;
-                margin-bottom: 10px;
-            }
-            
-            h2 {
-                color: #667eea;
-                margin-bottom: 20px;
-                font-size: 1.8rem;
-            }
-            
-            main {
-                background: rgba(255, 255, 255, 0.95);
-                backdrop-filter: blur(10px);
-                padding: 30px;
-                border-radius: 16px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-                animation: fadeInUp 0.6s ease-out 0.2s both;
-            }
-            
-            .report-list {
-                list-style: none;
-                padding: 0;
-            }
-            
-            .report-item {
-                background-color: white;
-                padding: 20px;
-                margin-bottom: 15px;
-                border-radius: 12px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-                animation: fadeInUp 0.6s ease-out 0.3s both;
-            }
-            
-            .report-item:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            }
-            
-            .report-link {
-                color: #667eea;
-                text-decoration: none;
-                font-size: 1.3rem;
-                font-weight: bold;
-                transition: color 0.3s ease;
-            }
-            
-            .report-link:hover {
-                color: #764ba2;
-                text-decoration: underline;
-            }
-            
-            .report-info {
-                color: #666;
-                font-size: 1rem;
-                margin-top: 5px;
-            }
-            
-            footer {
-                text-align: center;
-                margin-top: 50px;
-                color: white;
-                font-size: 1rem;
-                background: rgba(0, 0, 0, 0.1);
-                padding: 20px;
-                border-radius: 12px;
-                animation: fadeIn 0.6s ease-out 0.6s both;
-            }
-            
-            /* 动画效果 */
-            @keyframes fadeInDown {
-                from {
-                    opacity: 0;
-                    transform: translateY(-30px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            
-            @keyframes fadeInUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(30px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            
-            @keyframes fadeIn {
-                from {
-                    opacity: 0;
-                }
-                to {
-                    opacity: 1;
-                }
-            }
-            
-            /* 响应式设计 */
-            @media (max-width: 768px) {
-                body {
-                    padding: 10px;
-                }
-                
-                h1 {
-                    font-size: 2rem;
-                }
-                
-                h2 {
-                    font-size: 1.5rem;
-                }
-                
-                main {
-                    padding: 20px;
-                }
-                
-                .report-item {
-                    padding: 15px;
-                }
-                
-                .report-link {
-                    font-size: 1.1rem;
-                }
-                
-                header {
-                    padding: 20px;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <header>
-            <h1>GitHub监控日报</h1>
-            <div>每日Github监控汇总</div>
-        </header>
-        
-        <main>
-            <h2>Github监控</h2>
-            <ul class="report-list">
-                {% for report in reports %}
-                <li class="report-item">
-                    <a href="archive/{{ report.date }}/{{ report.path }}" class="report-link" target="_blank">{{ report.date }}</a>
-                    <div class="report-info">总更新数: {{ report.total_count }} | CVE数: {{ report.cve_count }} | 关键字监控数: {{ report.keyword_count }} | 红队工具更新数: {{ report.tools_count }}</div>
-                </li>
-                {% endfor %}
-            </ul>
-        </main>
-        
-        <footer>
-            <p style="text-align: center; margin: 0;">Power By 东方隐侠安全团 队·Anonymous@ <a href="https://www.dfyxsec.com/" style="color: white; text-decoration: underline;">隐侠安全客栈</a></p>
-        </footer>
-    </body>
-    </html>
-    """
-    
-    try:
-        # 获取所有已生成的日报
-        import os
-        import re
-        reports = []
-        report_dict = {}  # 使用字典确保每个日期只有一个条目
-        
-        if os.path.exists(archive_dir):
-            # 遍历archive目录下的所有子目录
-            for root, dirs, files in os.walk(archive_dir):
-                # 遍历所有HTML文件
-                for filename in files:
-                    if filename.endswith('.html') and filename.startswith('Daily_'):
-                        date = filename[6:-5]  # 提取日期部分
-                        file_path = os.path.join(root, filename)
-                        
-                        # 读取HTML文件，提取统计信息
-                        total_count = 0
-                        cve_count = 0
-                        keyword_count = 0
-                        tools_count = 0
-                        
-                        try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                content = f.read()
-                                # 从HTML中提取统计数据
-                                total_match = re.search(r'总更新数量.*?(\d+)', content)
-                                if total_match:
-                                    total_count = total_match.group(1)
-                                
-                                cve_match = re.search(r'CVE数量.*?(\d+)', content)
-                                if cve_match:
-                                    cve_count = cve_match.group(1)
-                                
-                                keyword_match = re.search(r'关键字监控数量.*?(\d+)', content)
-                                if keyword_match:
-                                    keyword_count = keyword_match.group(1)
-                                
-                                tools_match = re.search(r'红队工具更新数量.*?(\d+)', content)
-                                if tools_match:
-                                    tools_count = tools_match.group(1)
-                        except Exception as e:
-                            print(f"读取日报文件 {file_path} 失败: {e}")
-                        
-                        # 将日报信息添加到字典中，相同日期会覆盖旧条目
+    report_dict = {}
+    if os.path.exists(archive_dir):
+        for root, _, files in os.walk(archive_dir):
+            for filename in files:
+                if filename.endswith('.html') and filename.startswith('Daily_'):
+                    date = filename[6:-5]
+                    file_path = os.path.join(root, filename)
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        total_match = re.search(r'总更新数量.*?(\d+)', content)
+                        cve_match = re.search(r'CVE数量.*?(\d+)', content)
+                        keyword_match = re.search(r'关键字监控数量.*?(\d+)', content)
+                        tools_match = re.search(r'红队工具更新数量.*?(\d+)', content)
                         report_dict[date] = {
                             'date': date,
                             'path': filename,
-                            'total_count': total_count,
-                            'cve_count': cve_count,
-                            'keyword_count': keyword_count,
-                            'tools_count': tools_count
+                            'total_count': total_match.group(1) if total_match else '0',
+                            'cve_count': cve_match.group(1) if cve_match else '0',
+                            'keyword_count': keyword_match.group(1) if keyword_match else '0',
+                            'tools_count': tools_match.group(1) if tools_match else '0',
                         }
-            
-            # 将字典转换为列表
-            reports = list(report_dict.values())
-            # 按日期降序排序
-            reports.sort(key=lambda x: x['date'], reverse=True)
-        
-        # 渲染index.html
-        template = Template(index_template)
-        html_content = template.render(reports=reports)
-        
-        # 写入index.html文件到根目录
-        index_path = os.path.join(os.path.dirname(archive_dir), 'index.html')
-        with open(index_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        
-        print(f"index.html已更新: {index_path}")
-    except Exception as e:
-        print(f"更新index.html失败: {e}")
+                    except Exception:
+                        pass
+
+    reports = sorted(report_dict.values(), key=lambda x: x['date'], reverse=True)
+    if not reports:
+        return
+
+    latest_date = reports[0]['date']
+    updated = f"{latest_date}T00:00:00Z"
+
+    items = []
+    for r in reports[:30]:
+        d = r['date']
+        pub = f"{d}T00:00:00Z"
+        link = f"{base_url}/raw/main/archive/{d}/{r['path']}"
+        title = f"当日情报_{d}"
+        summary = (
+            f"总更新数: {r['total_count']} | "
+            f"CVE数: {r['cve_count']} | "
+            f"关键字监控数: {r['keyword_count']} | "
+            f"红队工具更新数: {r['tools_count']}"
+        )
+        items.append(f"""  <entry>
+    <title>{title}</title>
+    <link href="{link}"/>
+    <id>{link}</id>
+    <published>{pub}</published>
+    <updated>{pub}</updated>
+    <summary>{summary}</summary>
+  </entry>""")
+
+    feed = f"""<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>GitHub监控日报</title>
+  <subtitle>每日GitHub安全情报监控汇总</subtitle>
+  <link href="{base_url}/raw/main/feed.xml" rel="self"/>
+  <link href="{base_url}" rel="alternate"/>
+  <id>{base_url}/</id>
+  <updated>{updated}</updated>
+  <author><name>Anonymous@ 东方隐侠安全团队</name></author>
+{chr(10).join(items)}
+</feed>"""
+
+    feed_path = os.path.join(os.path.dirname(archive_dir), 'feed.xml')
+    with open(feed_path, 'w', encoding='utf-8') as f:
+        f.write(feed)
+    print(f"feed.xml已生成: {feed_path}")
+
+
+# 更新index.html
+def update_index_html(archive_dir):
+    """更新Github监控页"""
+    import os
+    import re
+
+    report_dict = {}
+    if os.path.exists(archive_dir):
+        for root, _, files in os.walk(archive_dir):
+            for filename in files:
+                if filename.endswith('.html') and filename.startswith('Daily_'):
+                    date = filename[6:-5]
+                    file_path = os.path.join(root, filename)
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        total_match = re.search(r'总更新数量.*?(\d+)', content)
+                        cve_match = re.search(r'CVE数量.*?(\d+)', content)
+                        keyword_match = re.search(r'关键字监控数量.*?(\d+)', content)
+                        tools_match = re.search(r'红队工具更新数量.*?(\d+)', content)
+                        report_dict[date] = {
+                            'date': date,
+                            'path': filename,
+                            'total_count': total_match.group(1) if total_match else '0',
+                            'cve_count': cve_match.group(1) if cve_match else '0',
+                            'keyword_count': keyword_match.group(1) if keyword_match else '0',
+                            'tools_count': tools_match.group(1) if tools_match else '0',
+                        }
+                    except Exception:
+                        pass
+
+    reports = sorted(report_dict.values(), key=lambda x: x['date'], reverse=True)
+
+    import json
+    reports_json = json.dumps(reports)
+
+    index_html = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub监控日报</title>
+<link rel="alternate" type="application/atom+xml" title="RSS Feed" href="feed.xml">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;
+  --surface:#161b22;
+  --border:#30363d;
+  --text:#e6edf3;
+  --text-muted:#8b949e;
+  --accent:#58a6ff;
+  --accent2:#a371f7;
+  --cve:#f85149;
+  --keyword:#ffa657;
+  --tool:#3fb950;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  line-height:1.6;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Header ── */
+.site-header{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(8px);
+}
+.header-inner{
+  max-width:1200px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  height:60px;gap:16px;
+}
+.header-brand{display:flex;align-items:center;gap:12px}
+.header-brand-icon{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,#58a6ff,#a371f7);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.header-title{font-size:1.1rem;font-weight:700;letter-spacing:-.02em}
+.header-sub{font-size:.75rem;color:var(--text-muted)}
+.header-actions{display:flex;align-items:center;gap:8px}
+.rss-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text-muted);padding:6px 12px;border-radius:8px;
+  font-size:.75rem;transition:all .2s;
+}
+.rss-btn:hover{border-color:var(--accent);color:var(--accent);text-decoration:none}
+.rss-btn svg{width:14px;height:14px}
+.theme-btn{
+  width:36px;height:36px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text-muted);cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Stats Bar ── */
+.stats-bar{
+  max-width:1200px;margin:24px auto 0;
+  padding:0 24px;
+  display:flex;gap:12px;flex-wrap:wrap;
+}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:16px 20px;
+  display:flex;align-items:center;gap:12px;
+  flex:1;min-width:140px;
+}
+.stat-icon{font-size:1.4rem}
+.stat-val{font-size:1.5rem;font-weight:700;line-height:1}
+.stat-label{font-size:.7rem;color:var(--text-muted);margin-top:2px}
+
+/* ── Main ── */
+.main-container{
+  max-width:1200px;margin:20px auto;
+  padding:0 24px 48px;
+  display:grid;
+  grid-template-columns:260px 1fr;
+  gap:20px;
+  align-items:start;
+}
+@media(max-width:768px){
+  .main-container{grid-template-columns:1fr}
+  .sidebar-card{display:none}
+}
+
+/* ── Sidebar ── */
+.sidebar-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;
+  position:sticky;top:76px;
+}
+.sidebar-title{
+  padding:12px 16px;font-size:.75rem;font-weight:600;
+  color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;
+  border-bottom:1px solid var(--border);
+}
+.date-list{list-style:none;max-height:400px;overflow-y:auto}
+.date-item{
+  padding:10px 16px;cursor:pointer;font-size:.875rem;
+  border-bottom:1px solid var(--border);transition:background .15s;
+  display:flex;align-items:center;gap:8px;
+}
+.date-item:last-child{border-bottom:none}
+.date-item:hover{background:rgba(255,255,255,.04)}
+.date-item.active{background:rgba(88,166,255,.1)}
+.date-item.active a{color:var(--accent)}
+.date-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--border);flex-shrink:0;
+}
+.date-item.has-cve .date-dot{background:var(--cve)}
+.date-item-link{color:var(--text)}
+.date-item-link:hover{color:var(--accent);text-decoration:none}
+
+/* ── Content ── */
+.content-area{}
+.content-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;gap:12px;flex-wrap:wrap;
+}
+.content-title{font-size:1rem;font-weight:600}
+.content-count{font-size:.8rem;color:var(--text-muted)}
+
+/* ── Search ── */
+.search-wrap{
+  position:relative;
+  max-width:320px;flex:1;
+}
+.search-icon{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  color:var(--text-muted);pointer-events:none;
+}
+.search-input{
+  width:100%;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);padding:8px 12px 8px 36px;
+  border-radius:8px;font-size:.875rem;
+  outline:none;transition:border-color .2s;
+}
+.search-input::placeholder{color:var(--text-muted)}
+.search-input:focus{border-color:var(--accent)}
+
+/* ── Filter Tabs ── */
+.filter-tabs{
+  display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;
+}
+.filter-tab{
+  padding:6px 14px;border-radius:20px;font-size:.8rem;
+  cursor:pointer;transition:all .2s;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text-muted);
+}
+.filter-tab:hover{border-color:var(--accent);color:var(--accent)}
+.filter-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── Report Cards ── */
+.report-cards{display:flex;flex-direction:column;gap:10px}
+.report-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:16px 20px;
+  transition:border-color .2s,transform .2s;
+  animation:fadeIn .3s ease-out;
+}
+.report-card:hover{border-color:var(--accent)}
+.report-card.hidden{display:none}
+
+.report-card-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:10px;gap:12px;
+}
+.report-date-block{display:flex;flex-direction:column;gap:2px}
+.report-date{
+  font-size:1.05rem;font-weight:700;
+  color:var(--text);
+}
+.report-date-link{color:var(--accent);font-size:.8rem}
+.report-date-link:hover{text-decoration:underline}
+.report-badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;
+}
+.badge-total{background:rgba(88,166,255,.15);color:var(--accent)}
+.badge-cve{background:rgba(248,81,73,.15);color:var(--cve)}
+.badge-kw{background:rgba(255,166,87,.15);color:var(--keyword)}
+.badge-tool{background:rgba(63,185,80,.15);color:var(--tool)}
+.badge-zero{opacity:.4}
+
+.report-stats{
+  display:flex;gap:16px;flex-wrap:wrap;
+}
+.report-stat{
+  display:flex;align-items:center;gap:6px;
+  font-size:.8rem;color:var(--text-muted);
+}
+.report-stat-num{font-weight:600;color:var(--text)}
+
+/* ── Empty State ── */
+.empty-state{
+  text-align:center;padding:60px 20px;
+  color:var(--text-muted);
+}
+.empty-state-icon{font-size:3rem;margin-bottom:12px}
+.empty-state-text{font-size:.9rem}
+
+/* ── Footer ── */
+.site-footer{
+  border-top:1px solid var(--border);
+  text-align:center;padding:24px;
+  color:var(--text-muted);font-size:.8rem;
+}
+.site-footer a{color:var(--accent)}
+
+/* ── Animations ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <div class="header-brand-icon">🛡️</div>
+      <div>
+        <div class="header-title">GitHub 安全情报监控</div>
+        <div class="header-sub">每日自动化追踪 CVE · 红队工具 · 安全资讯</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <a class="rss-btn" href="feed.xml" title="订阅RSS Feed">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C4.98 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/></svg>
+        RSS
+      </a>
+      <button class="theme-btn" id="themeToggle" title="切换主题">🌙</button>
+    </div>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="stat-icon">📅</div>
+    <div><div class="stat-val" id="totalReports">""" + str(len(reports)) + """</div><div class="stat-label">日报总数</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🔴</div>
+    <div><div class="stat-val" id="totalCve">""" + str(sum(int(r['cve_count']) for r in reports)) + """</div><div class="stat-label">CVE记录</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">🔍</div>
+    <div><div class="stat-val" id="totalKw">""" + str(sum(int(r['keyword_count']) for r in reports)) + """</div><div class="stat-label">关键字监控</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon">⚔️</div>
+    <div><div class="stat-val" id="totalTool">""" + str(sum(int(r['tools_count']) for r in reports)) + """</div><div class="stat-label">红队工具</div></div>
+  </div>
+</div>
+
+<div class="main-container">
+  <aside class="sidebar-card">
+    <div class="sidebar-title">📆 日期列表</div>
+    <ul class="date-list" id="dateList">
+      """ + "\n".join(f"""      <li class="date-item{' has-cve' if int(r['cve_count']) > 0 else ''}" data-date="{r['date']}">
+        <span class="date-dot"></span>
+        <a class="date-item-link" href="archive/{r['date']}/{r['path']}" target="_blank">{r['date']}</a>
+      </li>""" for r in reports[:60]) + """
+    </ul>
+  </aside>
+
+  <div class="content-area">
+    <div class="content-header">
+      <div>
+        <div class="content-title">📋 日报列表</div>
+        <div class="content-count" id="resultCount"></div>
+      </div>
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="searchInput" type="search" placeholder="搜索日期...">
+      </div>
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+      <span class="filter-tab active" data-filter="all">全部</span>
+      <span class="filter-tab" data-filter="cve">CVE</span>
+      <span class="filter-tab" data-filter="kw">关键字</span>
+      <span class="filter-tab" data-filter="tool">红队工具</span>
+    </div>
+
+    <div class="report-cards" id="reportCards">
+      """ + "\n".join(f"""      <div class="report-card" data-date="{r['date']}" data-cve="{r['cve_count']}" data-kw="{r['keyword_count']}" data-tool="{r['tools_count']}">
+        <div class="report-card-header">
+          <div class="report-date-block">
+            <a class="report-date" href="archive/{r['date']}/{r['path']}" target="_blank">当日情报_{r['date']}</a>
+            <a class="report-date-link" href="archive/{r['date']}/{r['path']}" target="_blank">查看日报 →</a>
+          </div>
+          <div class="report-badges">
+            <span class="badge badge-total{' badge-zero' if int(r['total_count'])==0 else ''}">📦 {r['total_count']}</span>
+            <span class="badge badge-cve{' badge-zero' if int(r['cve_count'])==0 else ''}">🔴 {r['cve_count']}</span>
+            <span class="badge badge-kw{' badge-zero' if int(r['keyword_count'])==0 else ''}">🔍 {r['keyword_count']}</span>
+            <span class="badge badge-tool{' badge-zero' if int(r['tools_count'])==0 else ''}">⚔️ {r['tools_count']}</span>
+          </div>
+        </div>
+      </div>""" for r in reports) + """
+    </div>
+
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="empty-state-icon">🔍</div>
+      <div class="empty-state-text">没有找到匹配的日报</div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <p>Power By <a href="https://www.dfyxsec.com/" target="_blank">东方隐侠安全团队</a> · Anonymous@</p>
+</footer>
+
+<script>
+(function(){
+  var reports = """ + reports_json + """;
+  var currentFilter = 'all';
+  var searchQuery = '';
+
+  function filterReports(){
+    var cards = document.querySelectorAll('.report-card');
+    var count = 0;
+    cards.forEach(function(card){
+      var date = card.dataset.date;
+      var cve = parseInt(card.dataset.cve)||0;
+      var kw = parseInt(card.dataset.kw)||0;
+      var tool = parseInt(card.dataset.tool)||0;
+      var matchFilter = currentFilter==='all'
+        || (currentFilter==='cve'&&cve>0)
+        || (currentFilter==='kw'&&kw>0)
+        || (currentFilter==='tool'&&tool>0);
+      var matchSearch = !searchQuery || date.includes(searchQuery);
+      var visible = matchFilter && matchSearch;
+      card.classList.toggle('hidden', !visible);
+      if(visible) count++;
+    });
+    document.getElementById('resultCount').textContent = '共 ' + count + ' 条';
+    document.getElementById('emptyState').style.display = count===0?'block':'none';
+  }
+
+  document.getElementById('filterTabs').addEventListener('click',function(e){
+    if(e.target.classList.contains('filter-tab')){
+      document.querySelectorAll('.filter-tab').forEach(function(t){t.classList.remove('active')});
+      e.target.classList.add('active');
+      currentFilter = e.target.dataset.filter;
+      filterReports();
+    }
+  });
+
+  document.getElementById('searchInput').addEventListener('input',function(e){
+    searchQuery = e.target.value.trim();
+    filterReports();
+  });
+
+  // theme toggle
+  var dark=true;
+  var btn=document.getElementById('themeToggle');
+  function applyTheme(){
+    document.documentElement.style.setProperty('--bg',dark?'#0d1117':'#f6f8fa');
+    document.documentElement.style.setProperty('--surface',dark?'#161b22':'#ffffff');
+    document.documentElement.style.setProperty('--border',dark?'#30363d':'#d0d7de');
+    document.documentElement.style.setProperty('--text',dark?'#e6edf3':'#1f2328');
+    document.documentElement.style.setProperty('--text-muted',dark?'#8b949e':'#656d76');
+    btn.textContent=dark?'☀️':'🌙';
+  }
+  btn.addEventListener('click',function(){dark=!dark;applyTheme()});
+  applyTheme();
+  filterReports();
+})();
+</script>
+</body>
+</html>"""
+
+    index_path = os.path.join(os.path.dirname(archive_dir), 'index.html')
+    with open(index_path, 'w', encoding='utf-8') as f:
+        f.write(index_html)
+    print(f"index.html已更新: {index_path}")
 
 # 创建GitHub Issue
 def create_github_issue(title, body):
