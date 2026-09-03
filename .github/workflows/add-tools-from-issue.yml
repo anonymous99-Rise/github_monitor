@@ -28,12 +28,11 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python update_tools_list.py
 
-      - name: Commit changes
-        if: always()
+      - name: Commit and push changes
+        if: success()
         run: |
-          git diff
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
           git add tools_list.yaml
-          git commit -m "Auto update tools_list.yaml from issue"
-          git push
+          git commit -m "Auto update tools_list.yaml from issue" || echo "No changes to commit"
+          git push --force-with-lease

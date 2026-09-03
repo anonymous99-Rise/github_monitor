@@ -88,10 +88,21 @@ jobs:
           commit_message: "Bump version to ${{ steps.bump_version.outputs.new_version }}"
           push_options: --force-with-lease
 
-      - name: Commit and push changes with tagging
+      - name: Commit and push changes
         if: steps.check_tag.outputs.tag_exists == 'false'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Bump version to ${{ steps.bump_version.outputs.new_version }}"
           tagging_message: "${{ steps.bump_version.outputs.new_version }}"
           push_options: --force-with-lease
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.tag_exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump_version.outputs.new_version }}
+          name: ${{ steps.bump_version.outputs.new_version }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

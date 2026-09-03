@@ -32,17 +32,16 @@ jobs:
       - name: Commit and Push Changes
         id: commit
         run: |
-          git diff --quiet
-          if [ $? -ne 0 ]; then
-            git config --global user.email "actions@github.com"
-            git config --global user.name "GitHub Actions"
-            git add config.yaml
-            git commit -m "Update blacklist from issue #${{ github.event.issue.number }}"
-            git push origin main
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add config.yaml
+          if git diff --quiet --cached; then
             echo "No changes to commit" >&2
             echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            git commit -m "Update blacklist from issue #${{ github.event.issue.number }}"
+            git push --force-with-lease origin main
+            echo "changed=true" >> $GITHUB_OUTPUT
           fi
       
       - name: Comment and Close Issue

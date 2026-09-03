@@ -85,6 +85,7 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          pull_strategy: rebase
 
   del_runs:
     runs-on: ubuntu-latest
