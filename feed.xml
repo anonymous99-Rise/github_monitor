@@ -5,8 +5,16 @@
   <link href="https://github.com/anonymous99-Rise/github_monitor/raw/main/feed.xml" rel="self"/>
   <link href="https://github.com/anonymous99-Rise/github_monitor" rel="alternate"/>
   <id>https://github.com/anonymous99-Rise/github_monitor/</id>
-  <updated>2026-10-19T00:00:00Z</updated>
+  <updated>2026-10-20T00:00:00Z</updated>
   <author><name>Anonymous@ 东方隐侠安全团队</name></author>
+  <entry>
+    <title>当日情报_2026-10-20</title>
+    <link href="https://github.com/anonymous99-Rise/github_monitor/raw/main/archive/2026-10-20/Daily_2026-10-20.html"/>
+    <id>https://github.com/anonymous99-Rise/github_monitor/raw/main/archive/2026-10-20/Daily_2026-10-20.html</id>
+    <published>2026-10-20T00:00:00Z</published>
+    <updated>2026-10-20T00:00:00Z</updated>
+    <summary>总更新数: 14 | CVE数: 6 | 关键字监控数: 8 | 红队工具更新数: 0</summary>
+  </entry>
   <entry>
     <title>当日情报_2026-10-19</title>
     <link href="https://github.com/anonymous99-Rise/github_monitor/raw/main/archive/2026-10-19/Daily_2026-10-19.html"/>
@@ -238,13 +246,5 @@
     <published>2026-09-21T00:00:00Z</published>
     <updated>2026-09-21T00:00:00Z</updated>
     <summary>总更新数: 28 | CVE数: 10 | 关键字监控数: 18 | 红队工具更新数: 0</summary>
-  </entry>
-  <entry>
-    <title>当日情报_2026-09-20</title>
-    <link href="https://github.com/anonymous99-Rise/github_monitor/raw/main/archive/2026-09-20/Daily_2026-09-20.html"/>
-    <id>https://github.com/anonymous99-Rise/github_monitor/raw/main/archive/2026-09-20/Daily_2026-09-20.html</id>
-    <published>2026-09-20T00:00:00Z</published>
-    <updated>2026-09-20T00:00:00Z</updated>
-    <summary>总更新数: 26 | CVE数: 12 | 关键字监控数: 14 | 红队工具更新数: 0</summary>
   </entry>
 </feed>
